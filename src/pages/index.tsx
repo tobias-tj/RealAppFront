@@ -2,7 +2,7 @@ import Head from "next/head";
 
 import styles from "./index.module.css";
 import { env } from "~/env";
-import { Button, ButtonGroup, Container, Heading } from "@chakra-ui/react";
+import { Button, ButtonGroup, Card, Container, Heading } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import axios from "axios";
 
@@ -16,21 +16,15 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <Container marginTop={8}>
+        <Card padding={4}>
           <Heading> Mis Ventas</Heading>
-          <ButtonGroup>
-            <Button colorScheme='blue' onClick={() => router.push("/login")}>Login</Button>
-            <Button colorScheme='green' onClick={() => {
-              axios.get(`${env.NEXT_PUBLIC_BACKEND_BASE_URL}/sales`, {withCredentials: true})
-            }}>Sales</Button>
-            <Button colorScheme='purple' onClick={() => {
-              axios.post(`${env.NEXT_PUBLIC_BACKEND_BASE_URL}/sales`, 
-                {
-                  operation_date: new Date(),
-                  total_amount: 2800,
-                },
-                {withCredentials: true})
-            }}>Created Sale</Button>
-          </ButtonGroup>
+            <ButtonGroup mt={8}>
+              <Button colorScheme='blue' onClick={() => router.push("/login")}>Login</Button>
+              <Button colorScheme='purple' onClick={() => {
+                router.push("/clients")
+              }}>Clientes</Button>
+            </ButtonGroup>
+        </Card>
           
       </Container>
     </>

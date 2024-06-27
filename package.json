@@ -22,9 +22,11 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-hook-form": "^7.52.0",
+    "react-query": "^3.39.3",
     "zod": "^3.23.3"
   },
   "devDependencies": {
+    "@hookform/devtools": "^4.3.1",
     "@types/eslint": "^8.56.2",
     "@types/node": "^20.11.20",
     "@types/react": "^18.2.57",

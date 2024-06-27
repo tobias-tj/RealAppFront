@@ -22,7 +22,6 @@ const Login: NextPage = () => {
         formState: {errors},
     } = useForm<FieldValues>({
         resolver:  zodResolver(shema),
-        defaultValues: {email:"https.tobias.jara.404@gmail.com"}
     })
 
     const router = useRouter();
