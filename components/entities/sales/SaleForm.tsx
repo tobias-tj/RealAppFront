@@ -1,10 +1,10 @@
-import { Button, ButtonGroup, Card, Container, Flex, FormControl, FormErrorMessage, FormLabel, Heading, IconButton, Input, Select } from '@chakra-ui/react'
+import { Button, ButtonGroup, Card, Container, Divider, Flex, FormControl, FormErrorMessage, FormLabel, Heading, IconButton, Input, Select, Text } from '@chakra-ui/react'
 import { DevTool } from '@hookform/devtools'
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
-import React, { useState } from 'react'
-import { useFieldArray, useForm } from 'react-hook-form'
+import React, { useEffect, useState } from 'react'
+import { useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { env } from '~/env'
 // import DatePicker from 'react-datepicker'
@@ -62,15 +62,23 @@ const defaultPM: PaymentMethod = {
 export type Sale = z.infer<typeof saleShema>
 
 type PaymentMethod = z.infer<typeof salePaymentMethodShema>
-type Product = z.infer<typeof saleProductShema>
+type ProductForState = z.infer<typeof saleProductShema>
 
+
+interface Product extends ProductForState{
+    supplier_cost: number
+    micro: number
+    iva: number
+    salvament_margin: number
+    profit_margin: number
+}
  
 interface Props{
     saleId? : string
 }
 
 
-const defaultProduct: Product = {
+const defaultProduct: ProductForState = {
     code: "",
     name: "",
     qty: 0,
@@ -78,7 +86,11 @@ const defaultProduct: Product = {
 }   
 
 const SaleForm = ({ saleId} : Props) => {
-    const [startDate, setStartDate] = useState(new Date());
+    const [totalAmount, setTotalAmount] = useState(0);
+    const [foundClient, setFoundClient] = useState<{
+        _id : string,
+        firstname: string
+    } | null>();
 
 
     const { 
@@ -104,6 +116,11 @@ const SaleForm = ({ saleId} : Props) => {
         }
     })
 
+    const productsState = useWatch({
+        control,
+        name: "product"
+    })
+
     const { fields, append, remove } = useFieldArray({
         control, // control props comes from useForm (optional: if you are using FormProvider)
         name: "payment_method", // unique name for your Field Array
@@ -118,13 +135,14 @@ const SaleForm = ({ saleId} : Props) => {
     const router = useRouter();
 
 const onSubmit = async (data: Sale) => {
+    if(!foundClient) return;
     const PARAMS = !!saleId ? `/${saleId}` : ''
     try{
         const res = await axios(
             `${env.NEXT_PUBLIC_BACKEND_BASE_URL}/sales${PARAMS}`, 
             {
                 method : !!saleId ? 'PUT' : 'POST',
-                data,
+                data : {...data, client: foundClient._id},
                 withCredentials: true
             }   
         );
@@ -134,19 +152,65 @@ const onSubmit = async (data: Sale) => {
         console.error("Error submit data", error);
     }
 }
+
+useEffect(() => {
+    const currentProducts = getValues("product")
+    if(currentProducts?.length > 0){
+        let amount = currentProducts.reduce(
+            (prev, curr) => prev + curr.qty * (curr.total),
+            0
+        )
+        setTotalAmount(amount)
+        setValue(`payment_method.0.amount`, amount)
+    }
+}, [productsState]);
+
+console.log({totalAmount})
+
   return (
     <>
         <form onSubmit={handleSubmit(onSubmit)}>
             <FormControl marginBottom={5} isInvalid={!!errors.client_document}>
                 <FormLabel>Documento del cliente</FormLabel>
-                <Input type="text" placeholder="Ingresa el nombre"{...register("client_document")}/>
+                <Flex gap={3}>
+                    <IconButton 
+                                aria-label='Search Database'
+                                icon={<SearchIcon />}
+                                onClick={ async () => {
+                                    const document = getValues('client_document')
+                                    console.log({document})
+                                    if(!document) return
+                                    const { data } = await axios.get(`${env.NEXT_PUBLIC_BACKEND_BASE_URL}/clients/document/${document}`, {withCredentials: true})
+                                        setFoundClient(data.data)
+                                }}
+                            />
+                    <Input type="text" placeholder="Ingrese numero de documento"{...register("client_document")}/>
+                </Flex>
+                {!!foundClient && (
+                    <Card mt={3} p={2}>
+                        <Text>{foundClient.firstname}</Text>
+                    </Card>
+                )}
                 <FormErrorMessage>{errors.client_document?.message}</FormErrorMessage>
             </FormControl>
             <FormControl marginBottom={5} isInvalid={!!errors.operation_date}>
                 <FormLabel>Fecha de la operacion</FormLabel>
-                <SingleDatepicker date={startDate} ref={register("operation_date").ref} onDateChange={(date : Date) => setValue("operation_date", date)}  />
+                <Input type='date' {...register("operation_date")} />
                 <FormErrorMessage>{errors.operation_date?.message}</FormErrorMessage>
             </FormControl>
+            <Flex alignItems="center" justifyContent="space-between" mt={8}>
+                <Heading size="lg">Productos</Heading>
+                <Button 
+                size="xs"
+                fontSize="1rem"
+                lineHeight="1rem"
+                py={4}
+                colorScheme='blue'
+                onClick={() => addProduct(defaultProduct)}>
+                    Agregar
+                </Button>
+            </Flex>
+            <Divider mb="4" mt="2" />
             <Flex flexDir="column" mb={4}>
                 {products.map((field, index) => 
                 <Flex key={index} gap={3} alignItems="flex-end" marginBottom={5}>
@@ -160,12 +224,18 @@ const onSubmit = async (data: Sale) => {
                                 if(!code) return
                                 const { data } = await axios.get(`${env.NEXT_PUBLIC_BACKEND_BASE_URL}/products/${code}`, {withCredentials: true})
                                 const product: Product = data.data
+                                const {supplier_cost, micro, iva, profit_margin, salvament_margin } = product
+                                const baseCost = micro + supplier_cost
+                                const minimunCost = baseCost / (1 - salvament_margin)
+                                const finalPrice = +(minimunCost / (1 - profit_margin)).toFixed(3)
+
+
                                 if(!!product){
                                     setValue(`product.${index}`, {
                                         code: code,
                                         name: product.name,
-                                        qty: 0,
-                                        total: 0,
+                                        qty: 1,
+                                        total: finalPrice,
                                     })
                                 }else{
                                     console.log("No existe un producto con ese codigo")
@@ -173,27 +243,29 @@ const onSubmit = async (data: Sale) => {
                             }}
                         />
                     <FormControl flex={2}>
-                        <FormLabel>Codigo</FormLabel>
+                        { index === 0 && <FormLabel>Codigo</FormLabel> }
                         <Input type='text' placeholder='Codigo' {...register(`product.${index}.code`)} />
                     </FormControl>
                     <FormControl flex={5}>
-                        <FormLabel>Denominacion</FormLabel>
+                        { index === 0 && <FormLabel>Denominacion</FormLabel>}
                         <Input type='text' placeholder='Denominacion' {...register(`product.${index}.name`)} disabled/>
                     </FormControl>
                     <FormControl flex={2}>  
-                        <Flex alignItems="center" justifyContent="space-between">
-                            <FormLabel>Cantidad</FormLabel>
+                        <Flex alignItems="center" justifyContent="flex-end">
+                            { index === 0 && <FormLabel>Cantidad</FormLabel>}
                             {index > 0 && (
                                 <DeleteIcon mb={2} color="red.500"_hover={{color: "red.700", cursor: "pointer"}} onClick={() => removeProduct(index)} />
                             )}
                         </Flex>
-                            <Input type='number' {...register(`product.${index}.qty`)} />
+                            <Input type='number' {
+                                ...register(`product.${index}.qty`, {valueAsNumber: true})} 
+                                />
                     </FormControl>
                 </Flex>)}
-                <Button onClick={() => addProduct(defaultProduct)}>Nuevo Producto</Button>
             </Flex>
             <Flex flexDir="column" mb={4}>
-                {fields.map((field, index) => <Flex key={index} gap={3} alignItems="flex-end" marginBottom={5}>
+                {fields.map((field, index) => 
+                <Flex key={index} gap={3} alignItems="flex-end" marginBottom={5}>
                     <FormControl flex={7}>
                         <FormLabel>Metodo</FormLabel>
                         <Select placeholder='Seleccionar' {...register(`payment_method.${index}.method`)}>

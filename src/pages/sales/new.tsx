@@ -8,7 +8,7 @@ const NewClient:NextPage = () => {
 
     return (
         <Container marginTop={8}>
-            <Card padding={6}>
+            <Card padding={6} width={{ lg: "40rem" }}>
                 <Heading textAlign="center" marginBottom={8}>Nueva Venta</Heading>
                 <SaleForm />
             </Card>
