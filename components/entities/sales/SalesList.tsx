@@ -1,23 +1,22 @@
 import { Card, Flex, Text } from '@chakra-ui/react'
 import React from 'react'
-import { Client } from './ClientForm';
 import { useRouter } from 'next/navigation';
 
-interface ClientFromDB extends Client{
+interface SaleFromDB {
     _id : string
-    firstname: string
-    sales?: {count: number, amount: number}
+    total_amount: number
+    client: string
 }
 
 interface Props {
-    clients: ClientFromDB[];
+    sales: SaleFromDB[];
 }
 
-const ClientList = ({clients} : Props) => {
+const SalesList = ({sales} : Props) => {
     const router = useRouter();
   return (
     <Flex flexDirection={"column"} gap={2} mt={3}>
-        {clients.sort((a, b) => (b.sales?.amount || 0) - (a.sales?.amount || 0)).map((c) => (
+        {sales.sort((a, b) => (b.total_amount || 0) - (a.total_amount || 0)).map((c) => (
             <Card key={c._id}
             py={2}
             px={4}
@@ -30,12 +29,12 @@ const ClientList = ({clients} : Props) => {
             onClick={() => router.push(`/clients/${c._id}`)}
             flexDir="row"
             justifyContent="space-between">
-                <Text>{c.firstname}</Text>
-                <Text>${(c.sales?.amount)?.toFixed(2) || 0}</Text>
+                <Text>{c.client}</Text>
+                <Text>${c.total_amount?.toFixed(2) || 0}</Text>
             </Card>
         ))}
     </Flex>
   )
 }
 
-export default ClientList
+export default SalesList

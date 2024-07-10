@@ -2,11 +2,23 @@ import Head from "next/head";
 
 import styles from "./index.module.css";
 import { env } from "~/env";
-import { Button, ButtonGroup, Card, Container, Heading } from "@chakra-ui/react";
+import { Button, ButtonGroup, Card, Container, Heading, Spinner } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import axios from "axios";
+import { useQuery } from "react-query";
+import SalesList from "components/entities/sales/SalesList";
 
 export default function Home() {
+
+  const {data: sales, isLoading, isFetching} = useQuery({
+    queryKey: ["Sales"],
+    queryFn: async () => {
+        const res = await axios.get(`${env.NEXT_PUBLIC_BACKEND_BASE_URL}/sales`, {withCredentials: true});
+        return res.data.data;
+    },
+})
+
+
   const router = useRouter();
   return (
     <>
@@ -19,6 +31,8 @@ export default function Home() {
       <Button colorScheme='blue' mb={2} onClick={() => router.push("/login")}>Login</Button>
         <Card padding={4}>
           <Heading> Mis Ventas</Heading>
+          {isLoading ? <Spinner /> : <SalesList sales={sales} />}
+
             <ButtonGroup mt={8}>
             <Button colorScheme='blue' onClick={() => {
                 router.push("/sales/new")
