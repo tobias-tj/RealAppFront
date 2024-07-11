@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 import { Button, ButtonGroup, Card, Container, FormControl, FormLabel, FormErrorMessage ,Heading, Input } from "@chakra-ui/react";
 import axios from "axios";
 import { useRouter } from "next/router";
@@ -5,13 +6,13 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { env } from "~/env";
 import { zodResolver } from "@hookform/resolvers/zod";
+import MyForm from "components/ui/forms/MyForm";
+import MyInput from "components/ui/inputs/MyInput";
+import LoginButtons from "components/users/LoginButtons";
+import { NextPage } from "next";
+import { LoginType, LoginSchema } from "schemas/AuthSchema";
 
-const shema = z.object({
-    email : z.string().email("El email no es valido."),
-    code : z.string().length(6, "El codigo debe contener 6 caracteres."),
-})
 
-type FieldValues = z.infer<typeof shema>
 
 const Login: NextPage = () => {
 
@@ -20,14 +21,14 @@ const Login: NextPage = () => {
         getValues,
         handleSubmit, 
         formState: {errors},
-    } = useForm<FieldValues>({
-        resolver:  zodResolver(shema),
+    } = useForm<LoginType>({
+        resolver:  zodResolver(LoginSchema),
     })
 
     const router = useRouter();
 
-    const onSubmit = () => {
-        const { email, code } = getValues()
+    const onSubmit = (data: LoginType) => {
+        const { email, code } = data
         axios.post(`${env.NEXT_PUBLIC_BACKEND_BASE_URL}/auth/login/${email}`,
             { code }, {withCredentials: true}
         )
@@ -37,7 +38,7 @@ const Login: NextPage = () => {
         .catch(console.log)
     }
     
-    const onError = () => {
+    const onError = (errors : any) => {
         console.log({ errors })
     }
 
@@ -45,36 +46,11 @@ const Login: NextPage = () => {
         <Container marginTop={10}>
             <Heading textAlign="center">Iniciar Sesion</Heading>
             <Card padding={3} alignItems="center" marginTop={2}>
-                <form onSubmit={handleSubmit(onSubmit, onError)}>
-                    <FormControl marginBottom={5} isInvalid={!!errors.email}>
-                        <FormLabel>Email</FormLabel>
-                        <Input 
-                        type='text' 
-                        placeholder="Ingresa tu email" 
-                        {...register("email")}  
-                        />
-                        <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
-                    </FormControl>
-                    <FormControl isInvalid={!!errors.code}>
-                        <FormLabel>Codigo</FormLabel>
-                        <Input 
-                        type='text' 
-                        placeholder="Ingresa tu codigo" 
-                        {...register("code")}
-                        />
-                        <FormErrorMessage>{errors.code?.message}</FormErrorMessage>
-                    </FormControl>
-                    <ButtonGroup marginTop={5}>
-                        <Button type="submit">Iniciar Sesion</Button>
-                        <Button onClick={() => {
-                            const email = getValues("email")
-                            axios.post(`${env.NEXT_PUBLIC_BACKEND_BASE_URL}/auth/login/${email}/code`)
-                                .then(console.log)
-                                .catch(console.log)
-                        }} 
-                        >Generar Codigo</Button>
-                    </ButtonGroup>
-                </form>
+                <MyForm defaultValues={{email: "https.tobias.jara.404@gmail.com"}} zodSchema={LoginSchema} onSubmit={onSubmit} onError={onError}>
+                    <MyInput fieldName="email" label="Email" placeholder="Ingresar Email"/>
+                    <MyInput fieldName="code" label="Codigo" placeholder="Ingresar Codigo" />
+                    <LoginButtons />
+                </MyForm>
             </Card>
         </Container>
     )

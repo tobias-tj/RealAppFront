@@ -1,19 +1,11 @@
+/* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
 import { Card, Flex, Text } from '@chakra-ui/react'
 import React from 'react'
-import { Client } from './ClientForm';
 import { useRouter } from 'next/navigation';
+import { ClientListProps } from 'schemas/ClientSchema';
 
-interface ClientFromDB extends Client{
-    _id : string
-    firstname: string
-    sales?: {count: number, amount: number}
-}
 
-interface Props {
-    clients: ClientFromDB[];
-}
-
-const ClientList = ({clients} : Props) => {
+const ClientList = ({clients} : ClientListProps) => {
     const router = useRouter();
   return (
     <Flex flexDirection={"column"} gap={2} mt={3}>

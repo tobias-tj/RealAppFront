@@ -2,60 +2,26 @@ import { Button, ButtonGroup, Card, Container, Flex, FormControl, FormErrorMessa
 import { DevTool } from '@hookform/devtools'
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
+import MyForm from 'components/ui/forms/MyForm'
+import MyInput from 'components/ui/inputs/MyInput'
+import MySelect from 'components/ui/selects/MySelect'
 import { useRouter } from 'next/navigation'
 import React from 'react'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod'
+import { Client, ClientFormProps, ClientSchema, DOC_TYPES } from 'schemas/ClientSchema'
 import { env } from '~/env'
 
 
-const DOC_TYPES = [
-    "RUC",
-    "Cédula",
-    "Pasaporte",
-    "Identificación exterior"
-] as const
 
 
-const shema = z.object({
-    firstname: z.string().min(3),
-    lastname: z.string().min(3),
-    email : z.string().email("El email no es valido."),
-    document_type: z.enum(DOC_TYPES),
-    document_value: z.string().min(4),
-})
 
-export type Client = z.infer<typeof shema>
 
-interface Props{
-    clientId? : string
-}
+const ClientForm = ({ clientId} : ClientFormProps) => {
 
-const ClientForm = ({ clientId} : Props) => {
-    const { 
-        register,
-        control, 
-        reset,
-        getValues,
-        handleSubmit, 
-        formState: {errors},
-    } = useForm<Client>({
-        resolver:  zodResolver(shema),
-        defaultValues: async () => {
-            if(!clientId) return {};
-            const { data } = await axios.get(
-                `${env.NEXT_PUBLIC_BACKEND_BASE_URL}/clients/${clientId}`,
-                {withCredentials: true}
-            )
-            return data.data;
-        }
-    })
+    const router = useRouter();
 
-const router = useRouter();
-
-const onSubmit = async (data: Client) => {
-    const PARAMS = !!clientId ? `/${clientId}` : ''
-    try{
+    const onSubmit = async (data: Client, reset: any) => {
+        const PARAMS = !!clientId ? `/${clientId}` : ''
         const res = await axios(
             `${env.NEXT_PUBLIC_BACKEND_BASE_URL}/clients${PARAMS}`, 
             {
@@ -66,46 +32,28 @@ const onSubmit = async (data: Client) => {
         );
         reset();
         router.push("/clients");
-    }catch(error){
-        console.error("Error submit data", error);
     }
-}
+
+    const onError = () => console.log("Errors")
+
+    const setDefaultValue =  async () => {
+        if(!clientId) return {};
+        const { data } = await axios.get(
+            `${env.NEXT_PUBLIC_BACKEND_BASE_URL}/clients/${clientId}`,
+            {withCredentials: true}
+        )
+        return data.data;
+    }
+
   return (
     <>
-        <form onSubmit={handleSubmit(onSubmit)}>
-            <FormControl marginBottom={5} isInvalid={!!errors.firstname}>
-                <FormLabel>Nombre</FormLabel>
-                <Input type="text" placeholder="Ingresa tu nombre"{...register("firstname")}/>
-                <FormErrorMessage>{errors.firstname?.message}</FormErrorMessage>
-            </FormControl>
-            <FormControl marginBottom={5} isInvalid={!!errors.lastname}>
-                <FormLabel>Apellido</FormLabel>
-                <Input type="text" placeholder="Ingresa tu apellido"{...register("lastname")}/>
-                <FormErrorMessage>{errors.lastname?.message}</FormErrorMessage>
-            </FormControl>
-            <FormControl marginBottom={5} isInvalid={!!errors.email}>
-                <FormLabel>Email</FormLabel>
-                <Input 
-                type='text'
-                placeholder="Ingresa tu email" 
-                {...register("email")}  
-                />
-                <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
-            </FormControl>
-            <Flex gap={3}>
-                <FormControl flex={7}>
-                    <FormLabel>Tipo de documento</FormLabel>
-                    <Select placeholder='Seleccionar' {...register("document_type")}>
-                        {DOC_TYPES.map((dt) => (
-                            <option key={dt} value={dt}>{dt}</option>
-                        ))}
-                    </Select>
-                </FormControl>
-                <FormControl flex={6} marginBottom={5} isInvalid={!!errors.document_value}>
-                    <FormLabel>Documento</FormLabel>
-                    <Input type="text" placeholder="Ingresa tu numero de documento" {...register("document_value")}/>
-                    <FormErrorMessage>{errors.document_value?.message}</FormErrorMessage>
-                </FormControl>
+        <MyForm onSubmit={onSubmit} onError={onError} zodSchema={ClientSchema} defaultValues={setDefaultValue}>
+            <MyInput fieldName='firstname' label='Nombre' placeholder='Ingresar nombre' />
+            <MyInput fieldName='lastname' label='Apellido' placeholder='Ingresar apellido' />
+            <MyInput fieldName='email' label='Email' placeholder='Ingresar email' />
+            <Flex gap={3} mb={5}>
+                <MySelect fieldName='document_type' label='Tipo de Documento' options={DOC_TYPES} />
+                <MyInput fieldName='document_value' label='Numero de documento' placeholder='Ingresar documento' mb={0} />
             </Flex>
             <ButtonGroup>            
                 <Button colorScheme="green" type="submit">
@@ -115,8 +63,7 @@ const onSubmit = async (data: Client) => {
                     Volver
                 </Button>
             </ButtonGroup>   
-        </form>
-        <DevTool control={control} />
+        </MyForm>
     </>
                 
   )
