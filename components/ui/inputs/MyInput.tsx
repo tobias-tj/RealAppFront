@@ -1,21 +1,34 @@
+/* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
 import { FormControl, FormErrorMessage, FormLabel, Input } from "@chakra-ui/react"
 import { ReactNode } from "react"
 import { useFormContext } from "react-hook-form"
 
-interface Props{
+interface Props<T>{
     fieldName: string
     label: string
-    placeholder?: string
+    placeholder?: string 
     mb?: number
+    valueAsNumber?: boolean
     flex?:number
+    type?:string
+    showLabel?: boolean
 }
 
-const MyInput = ({fieldName, label, placeholder, mb = 5, flex = 3} : Props) => {
+function MyInput<T>({
+    fieldName,
+    label,
+    flex = 4,
+    showLabel = true,
+    type = "text",
+    placeholder,
+    valueAsNumber = false,
+    mb = 5,
+  }: Props<T>) {
     const { formState: { errors }, register } = useFormContext()
     return(
         <FormControl marginBottom={mb} isInvalid={!!errors[fieldName]} flex={flex}>
-                <FormLabel>{label}</FormLabel>
-                <Input type="text" placeholder={placeholder || fieldName} {...register(fieldName)}/>
+                {showLabel && <FormLabel>{label}</FormLabel>}
+                <Input type={type} placeholder={placeholder || fieldName} {...register(fieldName)}/>
                 <FormErrorMessage>{errors[fieldName]?.message as ReactNode}</FormErrorMessage>
         </FormControl>
     )
